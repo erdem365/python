@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="tr" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MinikCoder Akademi - Kodlama ile Geleceğini Şekillendir</title>
+
+    <!-- Chosen Palette: Educational Harmony (Dark Blue, Light Blue, Green, Gray, White) -->
+    <!-- Application Structure Plan: A single-page application (SPA) with a top-down narrative flow. The structure begins with a strong hero section to capture attention, followed by key sections (Courses, Instructors, About, Contact) in a logical discovery order. This linear path is supported by a sticky navigation bar for direct access, facilitating both guided exploration and goal-oriented navigation. This design was chosen for its simplicity and effectiveness in storytelling, guiding the user through the academy's offerings and values, which aligns with the Turkish cultural preference for clear, trust-building narratives. -->
+    <!-- Visualization & Content Choices: Report Info: Course organization -> Goal: Organize & Compare -> Viz/Method: A filterable grid of HTML cards -> Interaction: JS-powered category filtering and CSS hover animations -> Justification: Allows users to easily find relevant courses, enhancing usability. Report Info: Corporate History -> Goal: Inform & Build Trust -> Viz/Method: A vertical timeline using HTML/CSS -> Interaction: Scroll-triggered fade-up animations for each event -> Justification: Presents history engagingly, fulfilling the cultural need to establish a credible background. Report Info: General page flow -> Goal: Engage & Guide -> Viz/Method: Scroll-triggered animations on all sections -> Interaction: JS IntersectionObserver triggers CSS fade/slide animations -> Justification: Creates a modern, dynamic experience that guides user focus. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Roboto:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --color-dark-blue: #1A2B4C;
+            --color-light-blue: #66B2FF;
+            --color-green: #4CAF50;
+            --color-gray: #f3f4f6;
+            --color-dark-gray: #6b7280;
+            --color-text: #1f2937;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            color: var(--color-text);
+            background-color: #FFFFFF;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        .font-heading {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .bg-dark-blue {
+            background-color: var(--color-dark-blue);
+        }
+
+        .text-dark-blue {
+            color: var(--color-dark-blue);
+        }
+
+        .bg-light-blue {
+            background-color: var(--color-light-blue);
+        }
+
+        .text-light-blue {
+            color: var(--color-light-blue);
+        }
+
+        .bg-green {
+            background-color: var(--color-green);
+        }
+
+        .text-green {
+            color: var(--color-green);
+        }
+
+        .bg-gray {
+            background-color: var(--color-gray);
+        }
+
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .hero-bg {
+            background: linear-gradient(45deg, var(--color-dark-blue), #2a4a87);
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            width: 2px;
+            background-color: #e5e7eb;
+            top: 20px;
+            bottom: -20px;
+            left: 19px;
+            z-index: 0;
+        }
+
+        .timeline-item:last-child::before {
+            display: none;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 10px;
+            top: 20px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background-color: white;
+            border: 4px solid var(--color-light-blue);
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body class="bg-white">
+
+    <header id="header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <a href="#home" class="text-2xl font-bold font-heading text-white">MinikCoder Akademi</a>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="#home" class="text-white hover:text-light-blue transition">Ana Sayfa</a>
+                    <a href="#courses" class="text-white hover:text-light-blue transition">Eğitimler</a>
+                    <a href="#instructors" class="text-white hover:text-light-blue transition">Eğitmenler</a>
+                    <a href="#about" class="text-white hover:text-light-blue transition">Hakkımızda</a>
+                    <a href="#contact" class="text-white hover:text-light-blue transition">İletişim</a>
+                </nav>
+                <button id="mobile-menu-button" class="md:hidden text-white text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-dark-blue bg-opacity-90">
+            <nav class="flex flex-col items-center py-4 space-y-4">
+                <a href="#home" class="text-white hover:text-light-blue transition">Ana Sayfa</a>
+                <a href="#courses" class="text-white hover:text-light-blue transition">Eğitimler</a>
+                <a href="#instructors" class="text-white hover:text-light-blue transition">Eğitmenler</a>
+                <a href="#about" class="text-white hover:text-light-blue transition">Hakkımızda</a>
+                <a href="#contact" class="text-white hover:text-light-blue transition">İletişim</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section id="home" class="h-screen min-h-[600px] flex items-center hero-bg relative overflow-hidden">
+            <div class="container mx-auto px-4 text-white text-center z-10">
+                <div class="animate-on-scroll">
+                    <h1 class="text-4xl md:text-6xl font-bold font-heading mb-4 leading-tight">Kodlama ile Geleceğini
+                        Şekillendir</h1>
+                    <p class="text-lg md:text-xl max-w-3xl mx-auto mb-8">Yaratıcılığını ve potansiyelini ortaya
+                        çıkaracak, geleceğin teknolojilerine yön verecek eğitimlerimizle tanış.</p>
+                    <p class="text-lg md:text-xl max-w-3xl mx-auto mb-8">Her yaş grubuna ve seviyeye uygun derslerimiz,
+                        birebir veya sınıf ortamında sunulmaktadır. Aşağıdan eğitimlerimizi inceleyebilirsinizn</p>
+                    <a href="#courses"
+                        class="bg-light-blue text-dark-blue font-bold font-heading py-3 px-8 rounded-full text-lg hover:bg-white transition-all duration-300 transform hover:scale-105">Öğrenmeye
+                        Başla</a>
+                </div>
+            </div>
+            <div class="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white to-transparent"></div>
+        </section>
+
+        <section id="courses" class="py-20 bg-gray">
+            <div class="container mx-auto px-4">
+                <div class="flex justify-center mb-12 gap-16 flex-wrap">
+                    <div class="text-center mb-12 animate-on-scroll" style="margin-right: 20px;">
+                        <h2 class="text-3xl md:text-4xl font-bold text-dark-blue">Ders Sistemimiz ve Eğitimlerimiz </h2>
+                    </div>
+                   
+                    <div class="flex flex-col md:flex-row justify-center items-start gap-16 mb-12">
+                        <!-- Sol Sütun -->
+                        <div class="md:w-1/2">
+                            
+                            <p class="text-lg text-dark-gray mt-2">Her yaş ve seviyeye uygun özel hazırlanmış programlar
+                            </p>
+                            <p class="text-lg text-dark-gray mt-2">Kişiye özel yol haritası ile verimli ve hedef odaklı
+                                dersler</p>
+                                <p class="text-lg text-dark-gray mt-2">İsteğe bağlı olarak birebir veya sınıf ortamında
+                                eğitim imkânı</p>
+                        </div>
+
+                        <!-- Sağ Sütun -->
+                        <div class="md:w-1/2">
+                            <p class="text-lg text-dark-gray mt-2">Koçluk sistemi ile adım adım yazılım eğitimi</p>
+                            <p class="text-lg text-dark-gray mt-2">Eğitim sonunda seviye tespiti ve proje geliştirme
+                                deneyimi</p>
+                            <p class="text-lg text-dark-gray mt-2">Başarıyla tamamlayanlara sertifika verilmektedir</p>
+                        </div>
+                    </div>
+
+                  
+
+                    <div class="text-center mb-12 animate-on-scroll">
+                        
+                        <p class="text-lg text-dark-gray mt-2">Eğitimlerimizle kariyer hedeflerinize uygun kursu seçin,
+                            teknoloji dünyasına sağlam bir adım atın.</p>
+                        <p class="text-lg text-dark-gray mt-2">Geleceğin dijital dünyasında yer alacak, algoritmik
+                            düşünebilen ve modelleme yapabilen çocuklar yetiştiren eğitim içerikleri sunuyoruz.</p>
+                    </div>
+
+                    <div class="flex justify-center flex-wrap gap-2 md:gap-4 mb-10 animate-on-scroll"
+                        id="course-filters">
+                        <button data-filter="all"
+                            class="filter-btn active bg-light-blue text-dark-blue font-semibold py-2 px-6 rounded-full transition">Tümü</button>
+                        <button data-filter="7-11"
+                            class="filter-btn bg-white text-dark-gray font-semibold py-2 px-6 rounded-full transition">7-11
+                            Yaş</button>
+                        <button data-filter="11-15"
+                            class="filter-btn bg-white text-dark-gray font-semibold py-2 px-6 rounded-full transition">11-15
+                            Yaş</button>
+                        <button data-filter="15+"
+                            class="filter-btn bg-white text-dark-gray font-semibold py-2 px-6 rounded-full transition">15++
+                            Yaş</button>
+                    </div>
+
+                    <div id="course-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- 7-11 Yaş Grubu Kursları -->
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="7-11">
+                            <img src="https://placehold.co/600x400/1A2B4C/FFFFFF?text=Blok+Kodlama"
+                                alt="Blok Tabanlı Kodlama" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Blok Tabanlı Kodlama</h3>
+                                <p class="text-dark-gray mb-4 text-sm"> Blok tabanlı kodlama eğitimi, çocukların renkli
+                                    blokları birleştirerek algoritmalar oluşturduğu, problem çözme ve yaratıcılık
+                                    becerilerini geliştiren görsel bir yöntemdir. En popüler örneği Scratch ile oyun ve
+                                    animasyonlar tasarlanabilir.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 2 Ay</span>
+                                    <span class="bg-green text-white px-2 py-1 rounded-full text-xs">Başlangıç
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="7-11">
+                            <img src="https://placehold.co/600x400/2a4a87/FFFFFF?text=Oyun+Animasyon"
+                                alt="Oyun ve Animasyon Yapımı" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Oyun ve Animasyon Yapımı</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Oyun ve animasyon yapımı, çocukların hayal gücünü
+                                    teknolojiyle birleştirerek projeler geliştirdiği bir süreçtir. Scratch gibi
+                                    araçlarla
+                                    karakterler ve sahneler tasarlayarak kendi hikâyelerini canlandırır, kodlama ve
+                                    yaratıcılık becerilerini geliştirirler.</p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Erdem Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 2 Ay</span>
+                                    <span class="bg-green text-white px-2 py-1 rounded-full text-xs">Başlangıç
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="7-11">
+                            <img src="https://placehold.co/600x400/4CAF50/FFFFFF?text=Temel+Bilgisayar"
+                                alt="Temel Bilgisayar Yapıları" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Temel Bilgisayar Yapıları</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Temel bilgisayar yapıları eğitimi, bilgisayarın
+                                    çalışma mantığını ve temel bileşenlerini öğretir. İşlemci, bellek ve giriş-çıkış
+                                    aygıtları tanıtılır, verilerin nasıl işlendiği açıklanır. Böylece öğrenciler sağlam
+                                    bir
+                                    teknoloji temeli kazanır.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Erdem Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süreci 2 Ay</span>
+                                    <span class="bg-green text-white px-2 py-1 rounded-full text-xs">Başlangıç
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="7-11">
+                            <img src="https://placehold.co/600x400/1A2B4C/FFFFFF?text=Yapay+Zeka"
+                                alt="Yapay Zeka Kullanımı" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Yapay Zeka Kullanımı</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Yapay zeka kullanımı eğitimi, çocuklara yapay
+                                    zeka
+                                    araçlarını tanıtır ve basit uygulamalarını keşfetmelerini sağlar. Ders, yapay
+                                    zekanın
+                                    nasıl çalıştığını ve güncel sistemlerin nasıl doğru ve güvenli şekilde
+                                    kullanılacağını
+                                    eğlenceli ve anlaşılır bir şekilde öğretir.</p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Erdem Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 2 Ay</span>
+                                    <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs">Başlangıç
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="7-11">
+                            <img src="https://placehold.co/600x400/66B2FF/1A2B4C?text=Güvenli+İnternet"
+                                alt="Güvenli İnternet Kullanımı" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Güvenli İnternet Kullanımı</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Güvenli internet kullanımı eğitimi, çocuklara
+                                    internette nasıl güvenle gezinebileceklerini ve doğru davranışlar
+                                    sergileyebileceklerini
+                                    öğretir. Bu derste kişisel bilgileri koruma, zararlı içeriklerden uzak durma ve
+                                    dijital
+                                    dünyada saygılı olma gibi temel kurallar eğlenceli ve anlaşılır bir şekilde
+                                    aktarılır.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Erdem Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 2 Ay</span>
+                                    <span class="bg-green text-white px-2 py-1 rounded-full text-xs">Başlangıç
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 11-15 Yaş Grubu Kursları -->
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="11-15">
+                            <img src="https://placehold.co/600x400/1A2B4C/FFFFFF?text=JavaScript"
+                                alt="JavaScript Temelleri" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">JavaScript Temelleri</h3>
+                                <p class="text-dark-gray mb-4 text-sm">JavaScript temelleri eğitimi, çocuklara web
+                                    sayfalarına hareket ve etkileşim eklemeyi öğretir. Bu derste butonlar, animasyonlar
+                                    ve
+                                    oyun benzeri uygulamalar yaparak kodlamayı eğlenceli ve yaratıcı bir şekilde
+                                    öğrenirler.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 3 Ay</span>
+                                    <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">Orta
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="11-15">
+                            <img src="https://placehold.co/600x400/2a4a87/FFFFFF?text=Web+Tasarım"
+                                alt="Web Tasarım ve Arayüz Geliştirme" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Web Tasarım ve Arayüz Geliştirme</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Web tasarım ve arayüz geliştirme eğitimi,
+                                    çocuklara
+                                    HTML ve CSS kullanarak modern ve renkli web sayfaları oluşturmayı öğretir. Bu derste
+                                    kendi sitelerini tasarlayarak hem yaratıcılıklarını hem de temel web geliştirme
+                                    becerilerini geliştirirler.</p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 3 Ay</span>
+                                    <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">Orta
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="11-15">
+                            <img src="https://placehold.co/600x400/1A2B4C/FFFFFF?text=Python" alt="Python Programlama"
+                                class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Python Programlama</h3>
+                                <p class="text-dark-gray mb-4 text-sm"> Orta seviye Python eğitimi, çocuklara veri
+                                    işleme,
+                                    oyun ve basit projeler geliştirme becerilerini kazandırır. Dersler, Python modülleri
+                                    ve
+                                    uygulamalı örneklerle kodlamayı eğlenceli ve anlaşılır hale getirir.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Erdem Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 3 Ay</span>
+                                    <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">Orta
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="11-15">
+                            <img src="https://placehold.co/600x400/4CAF50/FFFFFF?text=Oyun+Projeleri"
+                                alt="Oyun Geliştirme Projeleri" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Oyun Geliştirme Projeleri</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Oyun geliştirme projeleri eğitimi, çocuklara
+                                    Unity ve
+                                    C# kullanarak 2D oyunlar tasarlamayı öğretir. Başlangıç ve orta seviye seviyelerde
+                                    yapılan bu dersle öğrenciler, kendi oyunlarını yaratırken kodlama ve yaratıcılık
+                                    becerilerini geliştirirler.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 3 Ay</span>
+                                    <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">Orta
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="11-15">
+                            <img src="https://placehold.co/600x400/66B2FF/1A2B4C?text=Algoritma"
+                                alt="Temel Seviye Algoritma ve Problemler" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Temel Seviye Algoritma ve Problemler
+                                </h3>
+                                <p class="text-dark-gray mb-4 text-sm">Temel seviye algoritma ve problemler eğitimi,
+                                    çocuklara mantıksal düşünme ve problem çözme becerilerini kazandırır. Ders sırasında
+                                    algoritma mantığı anlatılır ve basit algoritmik işlemler yaparak kodlama temelleri
+                                    pekiştirilir.</p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Erdem Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 3 Ay</span>
+                                    <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">Orta
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="11-15">
+                            <img src="https://placehold.co/600x400/1A2B4C/FFFFFF?text=Yapay+Zeka"
+                                alt="Yapay Zeka Kullanımı" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Yapay Zeka Kullanımı</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Yapay zeka kullanımı eğitimi, çocuklara yapay
+                                    zeka
+                                    araçlarını tanıtır ve basit uygulamalarını keşfetmelerini sağlar. Ders, yapay
+                                    zekanın
+                                    nasıl çalıştığını ve güvenli kullanımını eğlenceli şekilde öğretir.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Erdem Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 3 Ay</span>
+                                    <span class="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">Orta
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 15++ Yaş Grubu Kursları -->
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="15+">
+                            <img src="https://placehold.co/600x400/2a4a87/FFFFFF?text=Flutter"
+                                alt="Flutter Mobil Geliştirme" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Flutter Mobil Geliştirme</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Flutter mobil geliştirme eğitimi, öğrencilere tek
+                                    kod
+                                    tabanıyla hem iOS hem de Android uygulamaları oluşturmayı öğretir. Bu derste kendi
+                                    mobil
+                                    uygulamalarını tasarlayarak kodlama ve tasarım becerilerini geliştirebilirler.</p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 4 Ay</span>
+                                    <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs">İleri
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="15+">
+                            <img src="https://placehold.co/600x400/4CAF50/FFFFFF?text=SQL" alt="SQL Veritabanı"
+                                class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">SQL Veritabanı</h3>
+                                <p class="text-dark-gray mb-4 text-sm">SQL veritabanı eğitimi, öğrencilere veritabanı
+                                    yönetimi ve SQL sorgulama becerilerini kazandırır. Bu derste verileri organize
+                                    etmeyi,
+                                    sorgulamayı ve ileri seviye uygulamalarla veri yönetimini etkin bir şekilde
+                                    öğrenirler.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 3 Ay</span>
+                                    <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs">İleri
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="15+">
+                            <img src="https://placehold.co/600x400/66B2FF/1A2B4C?text=AI+Analiz"
+                                alt="Yapay Zeka Analizi ve Kullanımı" class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Yapay Zeka Analizi ve Kullanımı</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Yapay zeka analizi ve kullanımı eğitimi,
+                                    öğrencilere
+                                    veri analizi ve yapay zeka modellerini pratikte uygulamayı öğretir. Bu derste kendi
+                                    modellerini oluşturup veriler üzerinde test ederek yapay zekanın işleyişini
+                                    öğrenirler.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 4 Ay</span>
+                                    <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs">İleri
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="15+">
+                            <img src="https://placehold.co/600x400/1A2B4C/FFFFFF?text=Python" alt="Python Programlama"
+                                class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Python Programlama</h3>
+                                <p class="text-dark-gray mb-4 text-sm"> İleri seviye Python programlama eğitimi,
+                                    öğrencilere
+                                    veri bilimi, yapay zeka, web geliştirme ve otomasyon projelerinde Python’u etkin
+                                    kullanmayı öğretir. Dersler, modüller, ileri algoritmalar ve uygulamalı projelerle
+                                    programlama becerilerini derinleştirir.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 4 Ay</span>
+                                    <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs">İleri
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="15+">
+                            <img src="https://placehold.co/600x400/2a4a87/FFFFFF?text=C+Programlama" alt="C Programlama"
+                                class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">C Programlama</h3>
+                                <p class="text-dark-gray mb-4 text-sm">C programlama eğitimi, öğrencilere sistem
+                                    programlama
+                                    ve gömülü sistemler için C dilini öğretir. Ders sırasında ileri seviye algoritmalar
+                                    ve
+                                    uygulamalar ile programlama becerileri geliştirilir.</p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> Kadir Emir Yücel</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 4 Ay</span>
+                                    <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs">İleri
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="course-card bg-white rounded-lg shadow-lg overflow-hidden transform hover:-translate-y-2 transition-transform duration-300 animate-on-scroll"
+                            data-category="15+">
+                            <img src="https://placehold.co/600x400/4CAF50/FFFFFF?text=Java" alt="Java Programlama"
+                                class="w-full h-48 object-cover">
+                            <div class="p-6">
+                                <h3 class="text-xl font-bold text-dark-blue mb-2">Java Programlama</h3>
+                                <p class="text-dark-gray mb-4 text-sm">Java programlama eğitimi, öğrencilere kurumsal
+                                    uygulamalar ve Android geliştirme için Java dilini öğretir. Ders sırasında ileri
+                                    seviye
+                                    konular ve nesne yönelimli programlama (OOP) uygulamalarıyla programlama becerileri
+                                    geliştirilir.
+                                </p>
+                                <div class="flex justify-between items-center text-sm text-dark-gray">
+                                    <span><i class="fas fa-user mr-1 text-light-blue"></i> ...</span>
+                                    <span><i class="fas fa-clock mr-1 text-light-blue"></i> Eğitim Süresi 4 Ay</span>
+                                    <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs">İleri
+                                        Seviye</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </section>
+
+        <section id="instructors" class="py-20 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12 animate-on-scroll">
+                    <h2 class="text-3xl md:text-4xl font-bold text-dark-blue">Uzman Eğitmenlerimiz</h2>
+                    <p class="text-lg text-dark-gray mt-2">Sektörün içinden gelen, deneyimli ve tutkulu eğitmen
+                        kadromuzla tanışın.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 ">
+                    <div class="text-center animate-on-scroll">
+                        <div class="relative inline-block">
+                            <img src="https://placehold.co/200x200/E0E0E0/333333?text=KEY" alt="Kadir Emir Yücel"
+                                class="w-40 h-40 rounded-full mx-auto mb-4 object-cover shadow-lg border-4 border-white">
+                        </div>
+                        <h3 class="text-xl font-bold text-dark-blue">Kadir Emir Yücel</h3>
+                        <p class="text-dark-gray mb-2">Yazılım Geliştirme Uzmanı</p>
+                        <p class="text-sm text-dark-gray max-w-xs mx-auto mb-3">Uzun yıllar olan tecrübesiyle, karmaşık
+                            konuları basitleştirerek öğretme konusunda uzmandır. Programlamlama Dilleri , Oyun
+                            Geliştirme , Yapay Zeka ve Makine Öğrenimi konusunda eğitim vermektedir.</p>
+                        <!-- <div class="flex justify-center space-x-4 text-dark-gray">
+                            <a href="#" class="hover:text-light-blue"><i class="fab fa-linkedin fa-lg"></i></a>
+                            <a href="#" class="hover:text-light-blue"><i class="fab email fa-lg"></i></a>
+                        </div> -->
+                    </div>
+                    <div class="text-center animate-on-scroll" style="transition-delay: 100ms;">
+                        <img src="https://placehold.co/200x200/E0E0E0/333333?text=EY" alt="Erdem Yücel"
+                            class="w-40 h-40 rounded-full mx-auto mb-4 object-cover shadow-lg border-4 border-white">
+                        <h3 class="text-xl font-bold text-dark-blue">Erdem Yücel</h3>
+                        <p class="text-dark-gray mb-2">Yazılım ve Algoritma Uzamnı</p>
+                        <p class="text-sm text-dark-gray max-w-xs mx-auto mb-3">Uzun yıllar olan tecrübesiyle ,karmaşık
+                            konuları basitleştirerek öğretme konusunda uzmandır. Programlamlama Dilleri , Bilgisayyar
+                            Temelleri , Yapay Zeka Kullanımı konularıve OOP yapıları hakkında eğitim vermektedir.</p>
+                        <!-- <div class="flex justify-center space-x-4 text-dark-gray">
+                            <a href="#" class="hover:text-light-blue"><i class="fab fa-linkedin fa-lg"></i></a>
+                            <a href="#" class="hover:text-light-blue"><i class="fab fa-twitter fa-lg"></i></a>
+                        </div> -->
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="py-20 bg-gray">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12 animate-on-scroll">
+                    <h2 class="text-3xl md:text-4xl font-bold text-dark-blue">Biz Kimiz?</h2>
+                    <p class="text-lg text-dark-gray mt-2">MinikCoder Akademi olarak, 7 yaş ve üzeri çocuklara
+                        oyunlaştırılmış, interaktif ve seviye bazlı yazılım eğitimleri sunarak onları geleceğe
+                        hazırlayan bir ekibiz. Çocukların algoritmik düşünme, yaratıcılık ve problem çözme gibi temel
+                        becerilerini geliştirirken, erken yaşta teknolojiyle tanışmalarını sağlayarak yaratıcı ve
+                        üretken bir nesil yetiştiriyoruz. Hayal güçlerini teknolojiyle birleştirerek onları dijital
+                        çağın liderleri haline getiriyor ve gelişen dijital dünyada çocuklarımıza, yani geleceğimize yol
+                        gösteriyoruz.</p>
+                </div>
+                <div class="max-w-4xl mx-auto">
+                    <div class="text-center mb-12 animate-on-scroll">
+                        <h3 class="text-2xl font-bold text-dark-blue mb-2">Misyonumuz</h3>
+                        <p class="text-dark-gray">MinikCoder Akademi’nin misyonu, 7 yaş ve üzeri çocuklara
+                            oyunlaştırılmış ve seviye bazlı yazılım eğitimleri sunarak algoritmik düşünme, problem çözme
+                            ve yaratıcılık becerilerini eğlenceli, öğretici ve sürdürülebilir bir şekilde
+                            geliştirmektir. Türkçe içerikler ve çocukların bilişsel seviyelerine uygun müfredatlarla,
+                            onları teknolojiyi yalnızca tüketen değil, üreten bireyler olarak yetiştirmeyi hedefler.</p>
+                    </div>
+                    <div class="text-center mb-16 animate-on-scroll">
+                        <h3 class="text-2xl font-bold text-dark-blue mb-2">Vizyonumuz</h3>
+                        <p class="text-dark-gray">MinikCoder Akademi’nin vizyonu, Türkiye’de çocuklara yönelik yazılım
+                            eğitiminde uzun vadeli, sürdürülebilir ve yenilikçi bir lider platform olmak; çocukları
+                            dijital çağın aktif üreticileri haline getirerek teknoloji okuryazarlığını
+                            yaygınlaştırmaktır.</p>
+                    </div>
+
+                    <!-- <div class="relative">
+                        <div class="timeline-item relative pl-12 pb-12 animate-on-scroll">
+                            <div class="timeline-dot"></div>
+                            <h4 class="font-bold text-lg text-dark-blue">2021 - Kuruluş</h4>
+                            <p class="text-dark-gray">MiniCoder Akademi, teknolojiye tutkulu bir grup eğitimci tarafından kuruldu.</p>
+                        </div>
+                        <div class="timeline-item relative pl-12 pb-12 animate-on-scroll">
+                            <div class="timeline-dot"></div>
+                            <h4 class="font-bold text-lg text-dark-blue">2022 - İlk Mezunlar</h4>
+                            <p class="text-dark-gray">İlk kodlama ve robotik atölyelerimizi başarıyla tamamladık ve 100'den fazla öğrenciyi mezun ettik.</p>
+                        </div>
+                        <div class="timeline-item relative pl-12 pb-12 animate-on-scroll">
+                            <div class="timeline-dot"></div>
+                            <h4 class="font-bold text-lg text-dark-blue">2023 - Online Platform</h4>
+                            <p class="text-dark-gray">Eğitimlerimizi daha geniş kitlelere ulaştırmak için online eğitim platformumuzu hayata geçirdik.</p>
+                        </div>
+                        <div class="timeline-item relative pl-12 animate-on-scroll">
+                            <div class="timeline-dot"></div>
+                            <h4 class="font-bold text-lg text-dark-blue">2024 - Ulusal Başarı</h4>
+                            <p class="text-dark-gray">Öğrencilerimiz, ulusal robotik yarışmasında birincilik ödülü kazandı.</p>
+                        </div>
+                    </div> -->
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="py-20 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12 animate-on-scroll">
+                    <h2 class="text-3xl md:text-4xl font-bold text-dark-blue">İletişime Geçin</h2>
+                    <p class="text-lg text-dark-gray mt-2">Sorularınız, önerileriniz veya iş birlikleri için bize
+                        ulaşın.</p>
+                    <p class="text-lg text-dark-gray mt-2">Eğitimlerimiz , koçluk ve sınıf dersleri hakkında detaylı
+                        bilgi almak için bize iletişim bilgilerinizi bırakabilirsiniz.</p>
+                </div>
+                <div class="max-w-5xl mx-auto grid md:grid-cols-2 gap-10">
+                    <div class="animate-on-scroll">
+                        <form id="contact-form" class="space-y-4">
+                            <div>
+                                <input type="text" id="name" name="name" placeholder="Adınız Soyadınız"
+                                    class="w-full p-3 rounded-md border border-gray-300" required>
+                            </div>
+                            <div>
+                                <input type="email" id="email" name="email" placeholder="E-posta Adresiniz"
+                                    class="w-full p-3 rounded-md border border-gray-300" required>
+                            </div>
+                            <div>
+                                <textarea id="message" name="message" rows="5" placeholder="Mesajınız"
+                                    class="w-full p-3 rounded-md border border-gray-300" required></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-dark-blue text-white py-3 px-8 rounded-md">Mesajı
+                                Gönder</button>
+                        </form>
+                    </div>
+
+
+                    <!-- JS dosyası -->
+                    <!-- <script src="form.js"></script> -->
+
+                    <div class="animate-on-scroll" style="transition-delay: 100ms;">
+                        <h3 class="text-2xl font-bold text-dark-blue mb-4">İletişim Bilgileri</h3>
+                        <div class="mt-4 text-dark-gray">
+                            <p><i class="fas fa-map-marker-alt mr-2 text-light-blue"></i> Depark, Buca ,İzmir, Türkiye
+                            </p>
+                            <p><i class="fas fa-phone mr-2 text-light-blue"></i> +90 552 358 81 04</p>
+                            <p><i class="fas fa-envelope mr-2 text-light-blue"></i> bilgi@minicoderakademi.com</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-dark-blue text-white py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2024 MiniCoder Akademi. Tüm hakları saklıdır.</p>
+            <div class="flex justify-center space-x-6 mt-4">
+                <a href="#" class="hover:text-light-blue"><i class="fab fa-facebook fa-lg"></i></a>
+                <a href="#" class="hover:text-light-blue"><i class="fab fa-instagram fa-lg"></i></a>
+                <a href="#" class="hover:text-light-blue"><i class="fab fa-linkedin fa-lg"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const header = document.getElementById('header');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const navLinks = document.querySelectorAll('#header a[href^="#"]');
+
+            function handleScroll() {
+                if (window.scrollY > 50) {
+                    header.classList.add('bg-dark-blue', 'shadow-lg');
+                } else {
+                    header.classList.remove('bg-dark-blue', 'shadow-lg');
+                }
+            }
+
+            window.addEventListener('scroll', handleScroll);
+            handleScroll();
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    if (mobileMenu.offsetParent !== null) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.animate-on-scroll').forEach(el => {
+                observer.observe(el);
+            });
+
+            const filterContainer = document.getElementById('course-filters');
+            const courseGrid = document.getElementById('course-grid');
+            const courseCards = courseGrid.querySelectorAll('.course-card');
+            const filterButtons = filterContainer.querySelectorAll('.filter-btn');
+
+            filterContainer.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') return;
+
+                const filterValue = e.target.getAttribute('data-filter');
+
+                filterButtons.forEach(btn => {
+                    btn.classList.remove('active', 'bg-light-blue', 'text-dark-blue');
+                    btn.classList.add('bg-white', 'text-dark-gray');
+                });
+                e.target.classList.add('active', 'bg-light-blue', 'text-dark-blue');
+                e.target.classList.remove('bg-white', 'text-dark-gray');
+
+                courseCards.forEach(card => {
+                    const category = card.getAttribute('data-category');
+                    if (filterValue === 'all' || filterValue === category) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+
+            const contactForm = document.getElementById('contact-form');
+            const formStatus = document.getElementById('form-status');
+            contactForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                formStatus.textContent = 'Mesajınız gönderiliyor...';
+                formStatus.className = 'text-blue-600';
+
+                setTimeout(() => {
+                    formStatus.textContent = 'Mesajınız başarıyla gönderildi! Teşekkür ederiz.';
+                    formStatus.className = 'text-green-600';
+                    contactForm.reset();
+                }, 1500);
+            });
+        });
+    </script>
+
+</body>
+
+</html>
