@@ -1,0 +1,45 @@
+def create_account(owner_name):
+    return {"owner":owner_name,"balance":0}
+def deposit(account,amount):
+    if(amount>0):
+        account["balance"]+=amount
+        print(f"{amount}başarılı bir biçimde yüklendi.Güncel bakiyeniz:{account["balance"]} TL")
+    else:
+        print("yatırılacak miktar pozitif olmalı")
+def withdraw(account,amount):
+    if (amount>0):
+        if(account["balance"]>=amount):
+            account["balance"]-=amount
+            print(f"{amount}başarılı bir şekilde çekildi. Güncell bakiye:{account["balance"]} TL")
+        else:
+            print("çekmek istediğiniz bakiye normal bakiyeyi aşıyor")
+
+    else:
+        print("Girilien sayı pozitif olmalı")  
+
+def display_balance(account):
+    print(f"{account[owner]}  hesabın guncel bakiyesi:{account["balance"]} TL")             
+
+print("Bankamızın hesap uygulamasına hoşgeldiniz")
+owner=input("Hesap sahibinin adı:")
+account=create_account(owner)
+while(True):
+    print("\nseçenekler:")
+    print("1.para  yatır")
+    print("2.para çek")
+    print("3.bakiye sorgulama")
+    print("4.cıkış yap")
+    choice=int(input("Seçiminizi yapınız(1-4):"))
+    if (choice==1):
+      amount=float(input("Yatırmak istediğiniz miktarı girniz: "))
+      deposit(account,amount)
+    elif (choice==2):
+      amout=float(input("Çekmek istediğiniz tutarı giriniz"))
+      withdraw(account,amount)
+    elif (choice==3):
+        display_balance(account)
+    elif (choice==4):
+        print("uygulamadan çıktıınz iyi günler dileriz ")
+        break
+    else:
+        print("1-4 arası bir seçim yapıınz")
