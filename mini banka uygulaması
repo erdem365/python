@@ -1,0 +1,134 @@
+from __future__ import annotations
+
+
+class BankAccount:
+    def __init__(self, owner: str):
+        self.owner = owner
+        self._balance = 0.0
+
+    @property
+    def balance(self) -> float:
+        return self._balance
+
+    def deposit(self, amount: float) -> None:
+        if amount <= 0:
+            raise ValueError("Miktar 0'dan büyük olmalı.")
+        self._balance += amount
+
+    def withdraw(self, amount: float) -> bool:
+        if amount <= 0:
+            raise ValueError("Miktar 0'dan büyük olmalı.")
+        if amount > self._balance:
+            return False
+        self._balance -= amount
+        return True
+
+    def transfer_to(self, other: BankAccount, amount: float) -> bool:
+        if self.withdraw(amount):
+            other.deposit(amount)
+            return True
+        return False
+
+    def __repr__(self):
+        return f"{self.owner}: {self.balance} TL"
+
+
+class SavingsAccount(BankAccount):
+    def __init__(self, owner: str, interest_rate: float):
+        super().__init__(owner)
+        self.interest_rate = interest_rate
+
+    def apply_interest(self):
+        self._balance += self._balance * self.interest_rate
+
+
+class CheckingAccount(BankAccount):
+    def __init__(self, owner: str, overdraft_limit: float = 0):
+        super().__init__(owner)
+        self.overdraft_limit = overdraft_limit
+
+    def withdraw(self, amount: float) -> bool:
+        if self._balance - amount < -self.overdraft_limit:
+            return False
+        self._balance -= amount
+        return True
+
+
+
+# MINI BANKA UYGULAMASI
+
+accounts = {}
+
+
+def create_account():
+    name = input("İsim: ")
+    acc_type = input("Tür (savings/checking): ").lower()
+
+    if acc_type == "savings":
+        rate = float(input("Faiz oranı (0.1 gibi): "))
+        accounts[name] = SavingsAccount(name, rate)
+    elif acc_type == "checking":
+        limit = float(input("Overdraft limiti: "))
+        accounts[name] = CheckingAccount(name, limit)
+    else:
+        print("Geçersiz tür!")
+
+
+def deposit():
+    name = input("Hesap adı: ")
+    amount = float(input("Miktar: "))
+    accounts[name].deposit(amount)
+
+
+def withdraw():
+    name = input("Hesap adı: ")
+    amount = float(input("Miktar: "))
+    if not accounts[name].withdraw(amount):
+        print("Yetersiz bakiye!")
+
+
+def transfer():
+    from_acc = input("Gönderen: ")
+    to_acc = input("Alan: ")
+    amount = float(input("Miktar: "))
+
+    if not accounts[from_acc].transfer_to(accounts[to_acc], amount):
+        print("Transfer başarısız!")
+
+
+def show_accounts():
+    for acc in accounts.values():
+        print(acc)
+
+
+
+# MENU
+
+while True:
+    print("\n--- BANKA SİSTEMİ ---")
+    print("1. Hesap oluştur")
+    print("2. Para yatır")
+    print("3. Para çek")
+    print("4. Transfer")
+    print("5. Hesapları göster")
+    print("6. Çıkış")
+
+    choice = input("Seçim: ")
+
+    try:
+        if choice == "1":
+            create_account()
+        elif choice == "2":
+            deposit()
+        elif choice == "3":
+            withdraw()
+        elif choice == "4":
+            transfer()
+        elif choice == "5":
+            show_accounts()
+        elif choice == "6":
+            break
+        else:
+            print("Geçersiz seçim!")
+    except Exception as e:
+        print("Hata:", e)
