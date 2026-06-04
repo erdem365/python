@@ -1,0 +1,86 @@
+import pandas as pd
+import numpy as np
+
+# --- Veri oluşturma ---
+data = {
+    "ürün": ["Laptop", "Kulaklık", "Masa", "Sandalye", "Telefon"],
+    "kategori": ["Teknoloji", "Teknoloji", "Mobilya", "Mobilya", "Teknoloji"],
+    "fiyat": [25000, 2000, 5000, 1500, 18000],
+    "adet": [3, 10, 2, 8, 5]
+}
+df = pd.DataFrame(data)
+
+print("--- ORİJİNAL VERİ ---")
+print(df, "\n")
+
+# 1. Yeni sütun: toplam_kazanc = fiyat * adet
+df["toplam_kazanc"] = df["fiyat"] * df["adet"]
+
+# 2. En çok gelir getiren ürün
+en_cok_urun = df.loc[df["toplam_kazanc"].idxmax(), "ürün"]
+en_cok_kazanc = df["toplam_kazanc"].max()
+print(f"En çok gelir getiren ürün: {en_cok_urun} (Kazanç: {en_cok_kazanc} TL)")
+
+# 3. Kategori bazlı toplam kazanç
+kategori_kazanc = df.groupby("kategori")["toplam_kazanc"].sum()
+print("\nKategori bazlı toplam kazanç:")
+print(kategori_kazanc)
+
+# 4. Ortalama ürün fiyatı
+ortalama_fiyat = df["fiyat"].mean()
+print(f"\nOrtalama ürün fiyatı: {ortalama_fiyat:.2f} TL")
+
+# 5. 10.000 TL üstü ürünleri filtrele
+ust_urunler = df[df["fiyat"] > 10000]
+print("\n10.000 TL üstü ürünler:")
+print(ust_urunler)
+
+# 6. Veriyi kazanca göre sırala (azalan)
+sirali_df = df.sort_values("toplam_kazanc", ascending=False)
+print("\nKazanca göre sıralanmış veri (azalan):")
+print(sirali_df)
+
+print("\n" + "="*50)
+print("--- NUMPY KISMI ---")
+print("="*50)
+
+# ---- NumPy görevleri ----
+# Fiyat sütununu NumPy array'e çevir
+fiyat_array = df["fiyat"].to_numpy()
+print("Fiyat array'i:", fiyat_array)
+
+# Minimum, maksimum ve medyan fiyat
+min_fiyat = np.min(fiyat_array)
+max_fiyat = np.max(fiyat_array)
+medyan_fiyat = np.median(fiyat_array)
+print(f"Minimum fiyat: {min_fiyat}")
+print(f"Maksimum fiyat: {max_fiyat}")
+print(f"Medyan fiyat: {medyan_fiyat}")
+
+# Rastgele 100 satış verisi üretme
+np.random.seed(42)  # tekrarlanabilirlik için
+
+urun_listesi = ["Laptop", "Kulaklık", "Masa", "Sandalye", "Telefon", "Monitör", "Klavye", "Kitap", "Dolap"]
+kategori_listesi = ["Teknoloji", "Mobilya", "Diğer"]
+
+rastgele_urunler = np.random.choice(urun_listesi, 100)
+rastgele_kategoriler = np.random.choice(kategori_listesi, 100)
+rastgele_fiyatlar = np.random.randint(100, 50000, 100)      # 100 - 49.999 TL arası
+rastgele_adetler = np.random.randint(1, 21, 100)            # 1 - 20 adet arası
+
+rastgele_veri = pd.DataFrame({
+    "ürün": rastgele_urunler,
+    "kategori": rastgele_kategoriler,
+    "fiyat": rastgele_fiyatlar,
+    "adet": rastgele_adetler
+})
+rastgele_veri["toplam_kazanc"] = rastgele_veri["fiyat"] * rastgele_veri["adet"]
+
+print("\nRastgele 100 satış verisinden ilk 5 satır:")
+print(rastgele_veri.head())
+
+# Histogram mantığında dağılım incelemesi (fiyatlar için)
+histogram, bin_edges = np.histogram(rastgele_fiyatlar, bins=10)
+print("\nFiyat dağılımı histogramı (10 bölge):")
+for i in range(len(histogram)):
+    print(f"Bölge {i+1}: {bin_edges[i]:.0f} - {bin_edges[i+1]:.0f} TL arası -> {histogram[i]} ürün")
