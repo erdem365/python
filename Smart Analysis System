@@ -1,0 +1,326 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Smart File Analysis System
+Level 1 — Intermediate Project
+
+This program analyzes all files in a given folder:
+- Separates files by type (extension and category)
+- Calculates total size
+- Shows the 10 largest files
+- Saves results to CSV files
+- Includes error handling and logging
+
+Usage:
+    python file_analyzer.py <folder_path>
+"""
+
+import sys
+import logging
+from pathlib import Path
+from datetime import datetime
+import pandas as pd
+
+# File categories (extension -> category)
+CATEGORY_MAP = {
+    # Images
+    '.jpg': 'Image', '.jpeg': 'Image', '.png': 'Image', '.gif': 'Image',
+    '.bmp': 'Image', '.tiff': 'Image', '.svg': 'Image', '.webp': 'Image',
+    # Videos
+    '.mp4': 'Video', '.avi': 'Video', '.mov': 'Video', '.mkv': 'Video',
+    '.flv': 'Video', '.wmv': 'Video', '.webm': 'Video',
+    # Audio
+    '.mp3': 'Audio', '.wav': 'Audio', '.flac': 'Audio', '.aac': 'Audio',
+    '.ogg': 'Audio', '.m4a': 'Audio',
+    # Documents
+    '.pdf': 'Document', '.doc': 'Document', '.docx': 'Document',
+    '.xls': 'Document', '.xlsx': 'Document', '.ppt': 'Document',
+    '.pptx': 'Document', '.txt': 'Document', '.rtf': 'Document',
+    '.odt': 'Document', '.ods': 'Document',
+    # Archives
+    '.zip': 'Archive', '.rar': 'Archive', '.7z': 'Archive',
+    '.tar': 'Archive', '.gz': 'Archive', '.bz2': 'Archive',
+    # Code files
+    '.py': 'Code', '.java': 'Code', '.c': 'Code', '.cpp': 'Code',
+    '.js': 'Code', '.html': 'Code', '.css': 'Code', '.json': 'Code',
+    '.xml': 'Code', '.sql': 'Code', '.sh': 'Code', '.bat': 'Code',
+    # Executables
+    '.exe': 'Executable', '.msi': 'Executable', '.app': 'Executable',
+    '.deb': 'Executable', '.rpm': 'Executable',
+    # Other
+    '.iso': 'DiskImage', '.vmdk': 'DiskImage',
+}
+
+class FileAnalyzer:
+    """Main class that performs file analysis operations."""
+    
+    def __init__(self, root_dir):
+        """
+        Initialization settings.
+        
+        Args:
+            root_dir (str or Path): Path to the root folder to scan.
+        """
+        self.root_dir = Path(root_dir)
+        if not self.root_dir.exists():
+            raise FileNotFoundError(f"Folder not found: {self.root_dir}")
+        if not self.root_dir.is_dir():
+            raise NotADirectoryError(f"Not a valid directory: {self.root_dir}")
+        
+        self.files = []          # List of all file info dictionaries
+        self.summary = {}        # Category-based summary statistics
+        self.total_size = 0      # Total size (bytes)
+        
+        # Setup logging
+        self._setup_logging()
+        self.logger = logging.getLogger(__name__)
+        
+        self.logger.info(f"FileAnalyzer started. Target folder: {self.root_dir.resolve()}")
+    
+    def _setup_logging(self):
+        """Configure logging (console + file)."""
+        log_format = '%(asctime)s - %(levelname)s - %(message)s'
+        logging.basicConfig(
+            level=logging.INFO,
+            format=log_format,
+            handlers=[
+                logging.FileHandler('file_analyzer.log', encoding='utf-8'),
+                logging.StreamHandler()
+            ]
+        )
+    
+    def _get_file_category(self, extension):
+        """
+        Return category based on file extension.
+        
+        Args:
+            extension (str): Extension including dot (e.g., '.pdf')
+            
+        Returns:
+            str: Category name, 'Other' if unknown
+        """
+        return CATEGORY_MAP.get(extension.lower(), 'Other')
+    
+    def _get_file_info(self, file_path):
+        """
+        Collect all necessary information for a file. Returns None on error.
+        
+        Args:
+            file_path (Path): Path to the file
+            
+        Returns:
+            dict or None: File information or None if error
+        """
+        try:
+            stat = file_path.stat()
+            size_bytes = stat.st_size
+            extension = file_path.suffix
+            category = self._get_file_category(extension)
+            mod_time = datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            
+            return {
+                'path': str(file_path.resolve()),
+                'size_bytes': size_bytes,
+                'size_mb': round(size_bytes / (1024 * 1024), 2),
+                'extension': extension if extension else '(no extension)',
+                'category': category,
+                'modified': mod_time
+            }
+        except PermissionError:
+            self.logger.warning(f"Permission error - cannot read file: {file_path}")
+        except FileNotFoundError:
+            self.logger.warning(f"File not found (may have been deleted): {file_path}")
+        except OSError as e:
+            self.logger.warning(f"File read error ({e}): {file_path}")
+        except Exception as e:
+            self.logger.error(f"Unexpected error: {file_path} - {e}")
+        return None
+    
+    def analyze(self):
+        """
+        Perform the main analysis:
+        - Scan all files (including subfolders)
+        - Calculate total size
+        - Collect category-based statistics
+        """
+        self.logger.info("Analysis started...")
+        self.files.clear()
+        self.summary.clear()
+        self.total_size = 0
+        
+        # Temporary type statistics
+        type_stats = {}
+        
+        # Recursively iterate through all files
+        for item in self.root_dir.rglob('*'):
+            if item.is_file():
+                file_info = self._get_file_info(item)
+                if file_info:
+                    self.files.append(file_info)
+                    self.total_size += file_info['size_bytes']
+                    
+                    # Category-based aggregation
+                    category = file_info['category']
+                    if category not in type_stats:
+                        type_stats[category] = {
+                            'count': 0,
+                            'total_bytes': 0,
+                            'extensions': set()
+                        }
+                    type_stats[category]['count'] += 1
+                    type_stats[category]['total_bytes'] += file_info['size_bytes']
+                    type_stats[category]['extensions'].add(file_info['extension'])
+        
+        # Build summary information
+        for cat, data in type_stats.items():
+            self.summary[cat] = {
+                'count': data['count'],
+                'total_bytes': data['total_bytes'],
+                'total_mb': round(data['total_bytes'] / (1024 * 1024), 2),
+                'extensions': ', '.join(sorted(data['extensions']))
+            }
+        
+        self.logger.info(f"Analysis completed. Total number of files: {len(self.files)}")
+        self.logger.info(f"Total size: {self.total_size / (1024**3):.2f} GB")
+    
+    def get_largest_files(self, n=10):
+        """
+        Return the n largest files (descending order by size).
+        
+        Args:
+            n (int): Number of files to return
+            
+        Returns:
+            list: List of largest file info dictionaries
+        """
+        if not self.files:
+            self.logger.warning("Analysis not performed yet. Please call analyze() first.")
+            return []
+        sorted_files = sorted(self.files, key=lambda x: x['size_bytes'], reverse=True)
+        return sorted_files[:n]
+    
+    def print_largest_files(self, n=10):
+        """Print the n largest files to the console."""
+        largest = self.get_largest_files(n)
+        if not largest:
+            print("No files found or analysis not performed.")
+            return
+        
+        print("\n" + "="*80)
+        print(f" TOP {len(largest)} LARGEST FILES")
+        print("="*80)
+        for i, file in enumerate(largest, 1):
+            print(f"{i:2}. {file['size_mb']:>8.2f} MB  | {file['category']:12} | {file['path']}")
+        print("="*80 + "\n")
+    
+    def print_summary(self):
+        """Print category-based summary statistics to the console."""
+        if not self.summary:
+            print("Analysis not performed yet or no files found.")
+            return
+        
+        print("\n" + "="*80)
+        print(" SUMMARY BY FILE TYPE")
+        print("="*80)
+        print(f"{'Category':<15} {'Count':>8} {'Total Size (MB)':>20} {'Extensions'}")
+        print("-"*80)
+        for cat, data in sorted(self.summary.items(), key=lambda x: x[1]['total_bytes'], reverse=True):
+            print(f"{cat:<15} {data['count']:>8} {data['total_mb']:>20.2f}   {data['extensions']}")
+        print("-"*80)
+        total_gb = self.total_size / (1024**3)
+        print(f"TOTAL NUMBER OF FILES: {len(self.files)}")
+        print(f" TOTAL SIZE: {total_gb:.2f} GB ({self.total_size:,} bytes)")
+        print("="*80 + "\n")
+    
+    def save_details_csv(self, output_path="file_details.csv"):
+        """
+        Save the detailed list of all files to a CSV file.
+        
+        Args:
+            output_path (str): Path to the output CSV file
+        """
+        if not self.files:
+            self.logger.warning("No file information to save. Call analyze() first.")
+            return
+        
+        df = pd.DataFrame(self.files)
+        # Reorder columns
+        df = df[['path', 'size_bytes', 'size_mb', 'extension', 'category', 'modified']]
+        df.to_csv(output_path, index=False, encoding='utf-8')
+        self.logger.info(f"File details saved: {output_path}")
+    
+    def save_summary_csv(self, output_path="file_type_summary.csv"):
+        """
+        Save the file type summary to a CSV file.
+        
+        Args:
+            output_path (str): Path to the output CSV file
+        """
+        if not self.summary:
+            self.logger.warning("No summary information to save. Call analyze() first.")
+            return
+        
+        summary_list = []
+        for cat, data in self.summary.items():
+            summary_list.append({
+                'Category': cat,
+                'File Count': data['count'],
+                'Total Size (MB)': data['total_mb'],
+                'Total Size (Bytes)': data['total_bytes'],
+                'Extensions': data['extensions']
+            })
+        df = pd.DataFrame(summary_list)
+        df = df.sort_values('Total Size (MB)', ascending=False)
+        df.to_csv(output_path, index=False, encoding='utf-8')
+        self.logger.info(f"Summary information saved: {output_path}")
+    
+    def run(self, details_csv="file_details.csv", summary_csv="file_type_summary.csv"):
+        """
+        Run all analysis steps and output results to console / CSV.
+        
+        Args:
+            details_csv (str): CSV file name for detailed list
+            summary_csv (str): CSV file name for summary
+        """
+        try:
+            self.analyze()
+            if not self.files:
+                print(" No files found or all files inaccessible.")
+                return
+            
+            self.print_summary()
+            self.print_largest_files(10)
+            self.save_details_csv(details_csv)
+            self.save_summary_csv(summary_csv)
+            print(f" Analysis complete. Log file: file_analyzer.log")
+        except Exception as e:
+            self.logger.error(f"Critical error during analysis: {e}", exc_info=True)
+            print(f" Critical error: {e}")
+
+
+def main():
+    """Main function for command-line execution."""
+    if len(sys.argv) != 2:
+        print("Usage: python file_analyzer.py <folder_path>")
+        print("Example: python file_analyzer.py C:\\Users\\Example\\Desktop\\Test")
+        sys.exit(1)
+    
+    folder_path = sys.argv[1]
+    
+    try:
+        analyzer = FileAnalyzer(folder_path)
+        analyzer.run()
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except NotADirectoryError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
