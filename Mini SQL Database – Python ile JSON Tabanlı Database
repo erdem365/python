@@ -1,0 +1,345 @@
+import json
+import os
+import re
+from enum import Enum
+from typing import List, Dict, Any, Optional
+
+# ---------------------------- TOKEN TYPES ----------------------------
+class TokenType(Enum):
+    KEYWORD = "KEYWORD"
+    IDENTIFIER = "IDENTIFIER"
+    NUMBER = "NUMBER"
+    STRING = "STRING"
+    LPAREN = "LPAREN"
+    RPAREN = "RPAREN"
+    COMMA = "COMMA"
+    SEMICOLON = "SEMICOLON"
+    EOF = "EOF"
+
+KEYWORDS = {"CREATE", "TABLE", "INSERT", "INTO", "VALUES", "SELECT", "FROM", "DELETE", "WHERE"}
+
+class Token:
+    def __init__(self, type_: TokenType, value: str):
+        self.type = type_
+        self.value = value
+    def __repr__(self):
+        return f"Token({self.type}, {self.value})"
+
+# ---------------------------- LEXER ----------------------------
+class Lexer:
+    def __init__(self, text: str):
+        self.text = text
+        self.pos = 0
+        self.current_char = text[0] if text else None
+
+    def advance(self):
+        self.pos += 1
+        self.current_char = self.text[self.pos] if self.pos < len(self.text) else None
+
+    def skip_whitespace(self):
+        while self.current_char and self.current_char.isspace():
+            self.advance()
+
+    def read_identifier(self):
+        result = ""
+        while self.current_char and (self.current_char.isalnum() or self.current_char == '_'):
+            result += self.current_char
+            self.advance()
+        return result
+
+    def read_number(self):
+        result = ""
+        while self.current_char and self.current_char.isdigit():
+            result += self.current_char
+            self.advance()
+        return result
+
+    def read_string(self):
+        result = ""
+        self.advance()  # skip opening quote
+        while self.current_char and self.current_char != "'":
+            result += self.current_char
+            self.advance()
+        self.advance()  # skip closing quote
+        return result
+
+    def get_next_token(self):
+        while self.current_char:
+            if self.current_char.isspace():
+                self.skip_whitespace()
+                continue
+            if self.current_char.isalpha() or self.current_char == '_':
+                word = self.read_identifier()
+                token_type = TokenType.KEYWORD if word.upper() in KEYWORDS else TokenType.IDENTIFIER
+                return Token(token_type, word.upper() if token_type == TokenType.KEYWORD else word)
+            if self.current_char.isdigit():
+                return Token(TokenType.NUMBER, self.read_number())
+            if self.current_char == "'":
+                return Token(TokenType.STRING, self.read_string())
+            if self.current_char == '(':
+                self.advance()
+                return Token(TokenType.LPAREN, '(')
+            if self.current_char == ')':
+                self.advance()
+                return Token(TokenType.RPAREN, ')')
+            if self.current_char == ',':
+                self.advance()
+                return Token(TokenType.COMMA, ',')
+            if self.current_char == ';':
+                self.advance()
+                return Token(TokenType.SEMICOLON, ';')
+            raise Exception(f"Unknown character: {self.current_char}")
+        return Token(TokenType.EOF, None)
+
+# ---------------------------- AST NODES (COMMANDS) ----------------------------
+class Command:
+    def execute(self, db: 'Database'):
+        pass
+
+class CreateTableCommand(Command):
+    def __init__(self, table_name: str, columns: List[tuple]):
+        self.table_name = table_name
+        self.columns = columns   # list of (name, type) e.g. ("id", "INTEGER")
+    def execute(self, db):
+        db.create_table(self.table_name, self.columns)
+
+class InsertCommand(Command):
+    def __init__(self, table_name: str, values: List[Any]):
+        self.table_name = table_name
+        self.values = values
+    def execute(self, db):
+        db.insert(self.table_name, self.values)
+
+class SelectCommand(Command):
+    def __init__(self, table_name: str):
+        self.table_name = table_name
+    def execute(self, db):
+        return db.select(self.table_name)
+
+class DeleteCommand(Command):
+    def __init__(self, table_name: str):
+        self.table_name = table_name
+    def execute(self, db):
+        db.delete_all(self.table_name)
+
+# ---------------------------- PARSER ----------------------------
+class Parser:
+    def __init__(self, lexer: Lexer):
+        self.lexer = lexer
+        self.current_token = lexer.get_next_token()
+
+    def eat(self, token_type: TokenType):
+        if self.current_token.type == token_type:
+            self.current_token = self.lexer.get_next_token()
+        else:
+            raise Exception(f"Expected {token_type}, got {self.current_token.type}")
+
+    def parse(self) -> Command:
+        # CREATE TABLE table_name (column_def, ...)
+        if self.current_token.type == TokenType.KEYWORD and self.current_token.value == "CREATE":
+            self.eat(TokenType.KEYWORD)
+            self.eat(TokenType.KEYWORD)  # TABLE
+            table_name = self.current_token.value
+            self.eat(TokenType.IDENTIFIER)
+            self.eat(TokenType.LPAREN)
+            columns = []
+            # parse columns: name type, name type, ...
+            while True:
+                col_name = self.current_token.value
+                self.eat(TokenType.IDENTIFIER)
+                col_type = self.current_token.value
+                self.eat(TokenType.IDENTIFIER)  # INTEGER or TEXT
+                columns.append((col_name, col_type))
+                if self.current_token.type == TokenType.COMMA:
+                    self.eat(TokenType.COMMA)
+                    continue
+                elif self.current_token.type == TokenType.RPAREN:
+                    break
+            self.eat(TokenType.RPAREN)
+            return CreateTableCommand(table_name, columns)
+
+        # INSERT INTO table_name VALUES (val1, val2, ...)
+        elif self.current_token.type == TokenType.KEYWORD and self.current_token.value == "INSERT":
+            self.eat(TokenType.KEYWORD)
+            self.eat(TokenType.KEYWORD)  # INTO
+            table_name = self.current_token.value
+            self.eat(TokenType.IDENTIFIER)
+            self.eat(TokenType.KEYWORD)  # VALUES
+            self.eat(TokenType.LPAREN)
+            values = []
+            while True:
+                if self.current_token.type == TokenType.NUMBER:
+                    values.append(int(self.current_token.value))
+                elif self.current_token.type == TokenType.STRING:
+                    values.append(self.current_token.value)
+                else:
+                    raise Exception("Expected number or string")
+                self.eat(self.current_token.type)
+                if self.current_token.type == TokenType.COMMA:
+                    self.eat(TokenType.COMMA)
+                    continue
+                elif self.current_token.type == TokenType.RPAREN:
+                    break
+            self.eat(TokenType.RPAREN)
+            return InsertCommand(table_name, values)
+
+        # SELECT * FROM table_name
+        elif self.current_token.type == TokenType.KEYWORD and self.current_token.value == "SELECT":
+            self.eat(TokenType.KEYWORD)
+            self.eat(TokenType.KEYWORD)  # *
+            self.eat(TokenType.KEYWORD)  # FROM
+            table_name = self.current_token.value
+            self.eat(TokenType.IDENTIFIER)
+            return SelectCommand(table_name)
+
+        # DELETE FROM table_name
+        elif self.current_token.type == TokenType.KEYWORD and self.current_token.value == "DELETE":
+            self.eat(TokenType.KEYWORD)
+            self.eat(TokenType.KEYWORD)  # FROM
+            table_name = self.current_token.value
+            self.eat(TokenType.IDENTIFIER)
+            return DeleteCommand(table_name)
+
+        else:
+            raise Exception("Unknown command")
+
+# ---------------------------- TABLE & DATABASE ----------------------------
+class Table:
+    def __init__(self, name: str, columns: List[tuple]):
+        self.name = name
+        self.columns = columns          # [(name, type), ...]
+        self.rows: List[Dict[str, Any]] = []
+        self._load_from_disk()
+
+    def _get_filename(self):
+        return f"{self.name}.json"
+
+    def _load_from_disk(self):
+        if os.path.exists(self._get_filename()):
+            with open(self._get_filename(), 'r') as f:
+                data = json.load(f)
+                self.rows = data.get("rows", [])
+        else:
+            self._save_to_disk()
+
+    def _save_to_disk(self):
+        with open(self._get_filename(), 'w') as f:
+            json.dump({"columns": self.columns, "rows": self.rows}, f, indent=2)
+
+    def insert(self, values: List[Any]):
+        if len(values) != len(self.columns):
+            raise Exception(f"Expected {len(self.columns)} values, got {len(values)}")
+        row = {}
+        for (col_name, col_type), val in zip(self.columns, values):
+            if col_type == "INTEGER" and not isinstance(val, int):
+                raise Exception(f"Column {col_name} expects INTEGER")
+            if col_type == "TEXT" and not isinstance(val, str):
+                raise Exception(f"Column {col_name} expects TEXT")
+            row[col_name] = val
+        self.rows.append(row)
+        self._save_to_disk()
+
+    def select_all(self) -> List[Dict[str, Any]]:
+        return self.rows
+
+    def delete_all(self):
+        self.rows = []
+        self._save_to_disk()
+
+class Database:
+    def __init__(self, data_dir="."):
+        self.data_dir = data_dir
+        self.tables: Dict[str, Table] = {}
+        self._load_all_tables()
+
+    def _load_all_tables(self):
+        # Load existing JSON files in directory as tables
+        for file in os.listdir(self.data_dir):
+            if file.endswith(".json"):
+                table_name = file[:-5]
+                with open(os.path.join(self.data_dir, file), 'r') as f:
+                    data = json.load(f)
+                    columns = [tuple(col) for col in data["columns"]]
+                    tbl = Table(table_name, columns)
+                    tbl.rows = data["rows"]
+                    self.tables[table_name] = tbl
+
+    def create_table(self, name: str, columns: List[tuple]):
+        if name in self.tables:
+            raise Exception(f"Table {name} already exists")
+        self.tables[name] = Table(name, columns)
+
+    def insert(self, table_name: str, values: List[Any]):
+        if table_name not in self.tables:
+            raise Exception(f"Table {table_name} does not exist")
+        self.tables[table_name].insert(values)
+
+    def select(self, table_name: str) -> List[Dict[str, Any]]:
+        if table_name not in self.tables:
+            raise Exception(f"Table {table_name} does not exist")
+        return self.tables[table_name].select_all()
+
+    def delete_all(self, table_name: str):
+        if table_name not in self.tables:
+            raise Exception(f"Table {table_name} does not exist")
+        self.tables[table_name].delete_all()
+
+    def execute_sql(self, sql: str):
+        lexer = Lexer(sql)
+        parser = Parser(lexer)
+        cmd = parser.parse()
+        return cmd.execute(self)
+
+# ---------------------------- UNIT TESTS ----------------------------
+import unittest
+
+class TestMiniDatabase(unittest.TestCase):
+    def setUp(self):
+        # Remove any leftover JSON files from previous tests
+        for f in os.listdir("."):
+            if f.endswith(".json"):
+                os.remove(f)
+        self.db = Database()
+
+    def test_create_table(self):
+        sql = "CREATE TABLE students (id INTEGER, name TEXT, age INTEGER)"
+        self.db.execute_sql(sql)
+        self.assertIn("students", self.db.tables)
+
+    def test_insert_and_select(self):
+        self.db.execute_sql("CREATE TABLE students (id INTEGER, name TEXT, age INTEGER)")
+        self.db.execute_sql("INSERT INTO students VALUES (1, 'Ahmet', 20)")
+        self.db.execute_sql("INSERT INTO students VALUES (2, 'Ayşe', 22)")
+        rows = self.db.execute_sql("SELECT * FROM students")
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["name"], "Ahmet")
+
+    def test_delete_all(self):
+        self.db.execute_sql("CREATE TABLE students (id INTEGER, name TEXT, age INTEGER)")
+        self.db.execute_sql("INSERT INTO students VALUES (1, 'Ali', 25)")
+        self.db.execute_sql("DELETE FROM students")
+        rows = self.db.execute_sql("SELECT * FROM students")
+        self.assertEqual(len(rows), 0)
+
+    def test_persistence(self):
+        # Create another DB instance to simulate restart
+        self.db.execute_sql("CREATE TABLE users (id INTEGER, name TEXT)")
+        self.db.execute_sql("INSERT INTO users VALUES (10, 'Zeynep')")
+        # Re-load DB
+        new_db = Database()
+        rows = new_db.execute_sql("SELECT * FROM users")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], "Zeynep")
+
+if __name__ == "__main__":
+    # Example usage
+    db = Database()
+    db.execute_sql("CREATE TABLE students (id INTEGER, name TEXT, age INTEGER)")
+    db.execute_sql("INSERT INTO students VALUES (1, 'Mehmet', 23)")
+    db.execute_sql("INSERT INTO students VALUES (2, 'Ela', 21)")
+    print(db.execute_sql("SELECT * FROM students"))
+    db.execute_sql("DELETE FROM students")
+    print(db.execute_sql("SELECT * FROM students"))
+
+    # Run unit tests
+    unittest.main(argv=[''], exit=False)
