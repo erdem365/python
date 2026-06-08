@@ -1,0 +1,343 @@
+import json
+import os
+import re
+from enum import Enum
+from typing import List, Dict, Any, Optional
+
+# ---------------------------- JETON TÜRLERİ ----------------------------
+class JetonTuru(Enum):
+    ANAHTAR_KELIME = "ANAHTAR_KELIME"
+    TANIMLAYICI = "TANIMLAYICI"
+    SAYI = "SAYI"
+    METIN = "METIN"
+    SOL_PARANTEZ = "SOL_PARANTEZ"
+    SAG_PARANTEZ = "SAG_PARANTEZ"
+    VIRGUL = "VIRGUL"
+    NOKTALI_VIRGUL = "NOKTALI_VIRGUL"
+    SON = "SON"
+
+ANAHTAR_KELIMELER = {"CREATE", "TABLE", "INSERT", "INTO", "VALUES", "SELECT", "FROM", "DELETE", "WHERE"}
+
+class Jeton:
+    def __init__(self, tur: JetonTuru, deger: str):
+        self.tur = tur
+        self.deger = deger
+    def __repr__(self):
+        return f"Jeton({self.tur}, {self.deger})"
+
+# ---------------------------- SÖZEL ÇÖZÜMLEYİCİ (LEXER) ----------------------------
+class SozelCozumleyici:
+    def __init__(self, metin: str):
+        self.metin = metin
+        self.konum = 0
+        self.guncel_karakter = metin[0] if metin else None
+
+    def ilerle(self):
+        self.konum += 1
+        self.guncel_karakter = self.metin[self.konum] if self.konum < len(self.metin) else None
+
+    def bosluk_atla(self):
+        while self.guncel_karakter and self.guncel_karakter.isspace():
+            self.ilerle()
+
+    def tanimlayici_oku(self):
+        sonuc = ""
+        while self.guncel_karakter and (self.guncel_karakter.isalnum() or self.guncel_karakter == '_'):
+            sonuc += self.guncel_karakter
+            self.ilerle()
+        return sonuc
+
+    def sayi_oku(self):
+        sonuc = ""
+        while self.guncel_karakter and self.guncel_karakter.isdigit():
+            sonuc += self.guncel_karakter
+            self.ilerle()
+        return sonuc
+
+    def metin_oku(self):
+        sonuc = ""
+        self.ilerle()  # açılış tırnağını atla
+        while self.guncel_karakter and self.guncel_karakter != "'":
+            sonuc += self.guncel_karakter
+            self.ilerle()
+        self.ilerle()  # kapanış tırnağını atla
+        return sonuc
+
+    def sonraki_jetonu_al(self):
+        while self.guncel_karakter:
+            if self.guncel_karakter.isspace():
+                self.bosluk_atla()
+                continue
+            if self.guncel_karakter.isalpha() or self.guncel_karakter == '_':
+                kelime = self.tanimlayici_oku()
+                jeton_turu = JetonTuru.ANAHTAR_KELIME if kelime.upper() in ANAHTAR_KELIMELER else JetonTuru.TANIMLAYICI
+                return Jeton(jeton_turu, kelime.upper() if jeton_turu == JetonTuru.ANAHTAR_KELIME else kelime)
+            if self.guncel_karakter.isdigit():
+                return Jeton(JetonTuru.SAYI, self.sayi_oku())
+            if self.guncel_karakter == "'":
+                return Jeton(JetonTuru.METIN, self.metin_oku())
+            if self.guncel_karakter == '(':
+                self.ilerle()
+                return Jeton(JetonTuru.SOL_PARANTEZ, '(')
+            if self.guncel_karakter == ')':
+                self.ilerle()
+                return Jeton(JetonTuru.SAG_PARANTEZ, ')')
+            if self.guncel_karakter == ',':
+                self.ilerle()
+                return Jeton(JetonTuru.VIRGUL, ',')
+            if self.guncel_karakter == ';':
+                self.ilerle()
+                return Jeton(JetonTuru.NOKTALI_VIRGUL, ';')
+            raise Exception(f"Bilinmeyen karakter: {self.guncel_karakter}")
+        return Jeton(JetonTuru.SON, None)
+
+# ---------------------------- SÖZDİZİM AĞACI DÜĞÜMLERİ (KOMUTLAR) ----------------------------
+class Komut:
+    def calistir(self, vt: 'Veritabani'):
+        pass
+
+class TabloOlusturKomutu(Komut):
+    def __init__(self, tablo_adi: str, sutunlar: List[tuple]):
+        self.tablo_adi = tablo_adi
+        self.sutunlar = sutunlar   # (isim, tur) örn. ("id", "INTEGER")
+    def calistir(self, vt):
+        vt.tablo_olustur(self.tablo_adi, self.sutunlar)
+
+class EkleKomutu(Komut):
+    def __init__(self, tablo_adi: str, degerler: List[Any]):
+        self.tablo_adi = tablo_adi
+        self.degerler = degerler
+    def calistir(self, vt):
+        vt.ekle(self.tablo_adi, self.degerler)
+
+class SecKomutu(Komut):
+    def __init__(self, tablo_adi: str):
+        self.tablo_adi = tablo_adi
+    def calistir(self, vt):
+        return vt.sec(self.tablo_adi)
+
+class SilKomutu(Komut):
+    def __init__(self, tablo_adi: str):
+        self.tablo_adi = tablo_adi
+    def calistir(self, vt):
+        vt.tumunu_sil(self.tablo_adi)
+
+# ---------------------------- SÖZDİZİMİ ÇÖZÜMLEYİCİ (PARSER) ----------------------------
+class SozdizimCozumleyici:
+    def __init__(self, sozel_cozumleyici: SozelCozumleyici):
+        self.sozel_cozumleyici = sozel_cozumleyici
+        self.guncel_jeton = sozel_cozumleyici.sonraki_jetonu_al()
+
+    def ye(self, beklenen_tur: JetonTuru):
+        if self.guncel_jeton.tur == beklenen_tur:
+            self.guncel_jeton = self.sozel_cozumleyici.sonraki_jetonu_al()
+        else:
+            raise Exception(f"Beklenen {beklenen_tur}, alınan {self.guncel_jeton.tur}")
+
+    def ayristir(self) -> Komut:
+        # CREATE TABLE tablo_adi (sutun_tanimlari)
+        if self.guncel_jeton.tur == JetonTuru.ANAHTAR_KELIME and self.guncel_jeton.deger == "CREATE":
+            self.ye(JetonTuru.ANAHTAR_KELIME)
+            self.ye(JetonTuru.ANAHTAR_KELIME)  # TABLE
+            tablo_adi = self.guncel_jeton.deger
+            self.ye(JetonTuru.TANIMLAYICI)
+            self.ye(JetonTuru.SOL_PARANTEZ)
+            sutunlar = []
+            while True:
+                sutun_adi = self.guncel_jeton.deger
+                self.ye(JetonTuru.TANIMLAYICI)
+                sutun_turu = self.guncel_jeton.deger
+                self.ye(JetonTuru.TANIMLAYICI)  # INTEGER veya TEXT
+                sutunlar.append((sutun_adi, sutun_turu))
+                if self.guncel_jeton.tur == JetonTuru.VIRGUL:
+                    self.ye(JetonTuru.VIRGUL)
+                    continue
+                elif self.guncel_jeton.tur == JetonTuru.SAG_PARANTEZ:
+                    break
+            self.ye(JetonTuru.SAG_PARANTEZ)
+            return TabloOlusturKomutu(tablo_adi, sutunlar)
+
+        # INSERT INTO tablo_adi VALUES (deger1, deger2, ...)
+        elif self.guncel_jeton.tur == JetonTuru.ANAHTAR_KELIME and self.guncel_jeton.deger == "INSERT":
+            self.ye(JetonTuru.ANAHTAR_KELIME)
+            self.ye(JetonTuru.ANAHTAR_KELIME)  # INTO
+            tablo_adi = self.guncel_jeton.deger
+            self.ye(JetonTuru.TANIMLAYICI)
+            self.ye(JetonTuru.ANAHTAR_KELIME)  # VALUES
+            self.ye(JetonTuru.SOL_PARANTEZ)
+            degerler = []
+            while True:
+                if self.guncel_jeton.tur == JetonTuru.SAYI:
+                    degerler.append(int(self.guncel_jeton.deger))
+                elif self.guncel_jeton.tur == JetonTuru.METIN:
+                    degerler.append(self.guncel_jeton.deger)
+                else:
+                    raise Exception("Sayı veya metin bekleniyor")
+                self.ye(self.guncel_jeton.tur)
+                if self.guncel_jeton.tur == JetonTuru.VIRGUL:
+                    self.ye(JetonTuru.VIRGUL)
+                    continue
+                elif self.guncel_jeton.tur == JetonTuru.SAG_PARANTEZ:
+                    break
+            self.ye(JetonTuru.SAG_PARANTEZ)
+            return EkleKomutu(tablo_adi, degerler)
+
+        # SELECT * FROM tablo_adi
+        elif self.guncel_jeton.tur == JetonTuru.ANAHTAR_KELIME and self.guncel_jeton.deger == "SELECT":
+            self.ye(JetonTuru.ANAHTAR_KELIME)
+            self.ye(JetonTuru.ANAHTAR_KELIME)  # *
+            self.ye(JetonTuru.ANAHTAR_KELIME)  # FROM
+            tablo_adi = self.guncel_jeton.deger
+            self.ye(JetonTuru.TANIMLAYICI)
+            return SecKomutu(tablo_adi)
+
+        # DELETE FROM tablo_adi
+        elif self.guncel_jeton.tur == JetonTuru.ANAHTAR_KELIME and self.guncel_jeton.deger == "DELETE":
+            self.ye(JetonTuru.ANAHTAR_KELIME)
+            self.ye(JetonTuru.ANAHTAR_KELIME)  # FROM
+            tablo_adi = self.guncel_jeton.deger
+            self.ye(JetonTuru.TANIMLAYICI)
+            return SilKomutu(tablo_adi)
+
+        else:
+            raise Exception("Bilinmeyen komut")
+
+# ---------------------------- TABLO & VERİTABANI ----------------------------
+class Tablo:
+    def __init__(self, ad: str, sutunlar: List[tuple]):
+        self.ad = ad
+        self.sutunlar = sutunlar          # [(isim, tip), ...]
+        self.satirlar: List[Dict[str, Any]] = []
+        self._diskden_yukle()
+
+    def _dosya_adi(self):
+        return f"{self.ad}.json"
+
+    def _diskden_yukle(self):
+        if os.path.exists(self._dosya_adi()):
+            with open(self._dosya_adi(), 'r') as f:
+                veri = json.load(f)
+                self.satirlar = veri.get("satirlar", [])
+        else:
+            self._diska_kaydet()
+
+    def _diska_kaydet(self):
+        with open(self._dosya_adi(), 'w') as f:
+            json.dump({"sutunlar": self.sutunlar, "satirlar": self.satirlar}, f, indent=2, ensure_ascii=False)
+
+    def ekle(self, degerler: List[Any]):
+        if len(degerler) != len(self.sutunlar):
+            raise Exception(f"Beklenen {len(self.sutunlar)} değer, alınan {len(degerler)}")
+        satir = {}
+        for (sutun_adi, sutun_tipi), deger in zip(self.sutunlar, degerler):
+            if sutun_tipi == "INTEGER" and not isinstance(deger, int):
+                raise Exception(f"{sutun_adi} sütunu INTEGER bekliyor")
+            if sutun_tipi == "TEXT" and not isinstance(deger, str):
+                raise Exception(f"{sutun_adi} sütunu TEXT bekliyor")
+            satir[sutun_adi] = deger
+        self.satirlar.append(satir)
+        self._diska_kaydet()
+
+    def tumunu_sec(self) -> List[Dict[str, Any]]:
+        return self.satirlar
+
+    def tumunu_sil(self):
+        self.satirlar = []
+        self._diska_kaydet()
+
+class Veritabani:
+    def __init__(self, veri_dizini="."):
+        self.veri_dizini = veri_dizini
+        self.tablolar: Dict[str, Tablo] = {}
+        self._tum_tablolari_yukle()
+
+    def _tum_tablolari_yukle(self):
+        for dosya in os.listdir(self.veri_dizini):
+            if dosya.endswith(".json"):
+                tablo_adi = dosya[:-5]
+                with open(os.path.join(self.veri_dizini, dosya), 'r') as f:
+                    veri = json.load(f)
+                    sutunlar = [tuple(sutun) for sutun in veri["sutunlar"]]
+                    tablo = Tablo(tablo_adi, sutunlar)
+                    tablo.satirlar = veri["satirlar"]
+                    self.tablolar[tablo_adi] = tablo
+
+    def tablo_olustur(self, ad: str, sutunlar: List[tuple]):
+        if ad in self.tablolar:
+            raise Exception(f"{ad} tablosu zaten var")
+        self.tablolar[ad] = Tablo(ad, sutunlar)
+
+    def ekle(self, tablo_adi: str, degerler: List[Any]):
+        if tablo_adi not in self.tablolar:
+            raise Exception(f"{tablo_adi} tablosu mevcut değil")
+        self.tablolar[tablo_adi].ekle(degerler)
+
+    def sec(self, tablo_adi: str) -> List[Dict[str, Any]]:
+        if tablo_adi not in self.tablolar:
+            raise Exception(f"{tablo_adi} tablosu mevcut değil")
+        return self.tablolar[tablo_adi].tumunu_sec()
+
+    def tumunu_sil(self, tablo_adi: str):
+        if tablo_adi not in self.tablolar:
+            raise Exception(f"{tablo_adi} tablosu mevcut değil")
+        self.tablolar[tablo_adi].tumunu_sil()
+
+    def sql_calistir(self, sql: str):
+        sozel = SozelCozumleyici(sql)
+        parser = SozdizimCozumleyici(sozel)
+        komut = parser.ayristir()
+        return komut.calistir(self)
+
+# ---------------------------- BİRİM TESTLER ----------------------------
+import unittest
+
+class MiniVeritabaniTest(unittest.TestCase):
+    def setUp(self):
+        # Artık JSON dosyalarını temizle
+        for f in os.listdir("."):
+            if f.endswith(".json"):
+                os.remove(f)
+        self.vt = Veritabani()
+
+    def test_tablo_olustur(self):
+        sql = "CREATE TABLE ogrenciler (id INTEGER, isim TEXT, yas INTEGER)"
+        self.vt.sql_calistir(sql)
+        self.assertIn("ogrenciler", self.vt.tablolar)
+
+    def test_ekle_ve_sec(self):
+        self.vt.sql_calistir("CREATE TABLE ogrenciler (id INTEGER, isim TEXT, yas INTEGER)")
+        self.vt.sql_calistir("INSERT INTO ogrenciler VALUES (1, 'Ahmet', 20)")
+        self.vt.sql_calistir("INSERT INTO ogrenciler VALUES (2, 'Ayşe', 22)")
+        satirlar = self.vt.sql_calistir("SELECT * FROM ogrenciler")
+        self.assertEqual(len(satirlar), 2)
+        self.assertEqual(satirlar[0]["isim"], "Ahmet")
+
+    def test_tumunu_sil(self):
+        self.vt.sql_calistir("CREATE TABLE ogrenciler (id INTEGER, isim TEXT, yas INTEGER)")
+        self.vt.sql_calistir("INSERT INTO ogrenciler VALUES (1, 'Ali', 25)")
+        self.vt.sql_calistir("DELETE FROM ogrenciler")
+        satirlar = self.vt.sql_calistir("SELECT * FROM ogrenciler")
+        self.assertEqual(len(satirlar), 0)
+
+    def test_kalicilik(self):
+        # Başka bir VT örneği oluştur (uygulama yeniden başlamış gibi)
+        self.vt.sql_calistir("CREATE TABLE kullanicilar (id INTEGER, isim TEXT)")
+        self.vt.sql_calistir("INSERT INTO kullanicilar VALUES (10, 'Zeynep')")
+        # Yeniden yükle
+        yeni_vt = Veritabani()
+        satirlar = yeni_vt.sql_calistir("SELECT * FROM kullanicilar")
+        self.assertEqual(len(satirlar), 1)
+        self.assertEqual(satirlar[0]["isim"], "Zeynep")
+
+if __name__ == "__main__":
+    # Örnek kullanım
+    vt = Veritabani()
+    vt.sql_calistir("CREATE TABLE ogrenciler (id INTEGER, isim TEXT, yas INTEGER)")
+    vt.sql_calistir("INSERT INTO ogrenciler VALUES (1, 'Mehmet', 23)")
+    vt.sql_calistir("INSERT INTO ogrenciler VALUES (2, 'Ela', 21)")
+    print(vt.sql_calistir("SELECT * FROM ogrenciler"))
+    vt.sql_calistir("DELETE FROM ogrenciler")
+    print(vt.sql_calistir("SELECT * FROM ogrenciler"))
+
+    # Birim testleri çalıştır
+    unittest.main(argv=[''], exit=False)
