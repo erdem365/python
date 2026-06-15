@@ -1,0 +1,95 @@
+import csv
+
+def ortalama_hesapla(vize, final):
+    """Vize ve final notlarına göre ağırlıklı ortalamayı hesaplar."""
+    return vize * 0.4 + final * 0.6
+
+def harf_notu(ortalama):
+    """Ortalamaya göre harf notunu belirler."""
+    if ortalama >= 90:
+        return "AA"
+    elif ortalama >= 85:
+        return "BA"
+    elif ortalama >= 80:
+        return "BB"
+    elif ortalama >= 75:
+        return "CB"
+    elif ortalama >= 70:
+        return "CC"
+    else:
+        return "FF"
+
+def ogrenci_bilgilerini_al():
+    """Kullanıcıdan öğrenci bilgilerini alır ve bir sözlük olarak döndürür."""
+    ad = input("Öğrenci adı: ").strip()
+    while True:
+        try:
+            vize = float(input("Vize notu (0-100): "))
+            if 0 <= vize <= 100:
+                break
+            else:
+                print("Not 0-100 arasında olmalıdır.")
+        except ValueError:
+            print("Lütfen geçerli bir sayı giriniz.")
+    while True:
+        try:
+            final = float(input("Final notu (0-100): "))
+            if 0 <= final <= 100:
+                break
+            else:
+                print("Not 0-100 arasında olmalıdır.")
+        except ValueError:
+            print("Lütfen geçerli bir sayı giriniz.")
+    
+    ort = ortalama_hesapla(vize, final)
+    harf = harf_notu(ort)
+    
+    return {
+        "ad": ad,
+        "vize": vize,
+        "final": final,
+        "ortalama": round(ort, 2),
+        "harf_notu": harf
+    }
+
+def dosyaya_kaydet(ogrenciler, dosya_adi="ogrenci_notlari.csv"):
+    """Öğrenci listesini CSV dosyasına yazar."""
+    with open(dosya_adi, mode='w', newline='', encoding='utf-8') as dosya:
+        yazici = csv.DictWriter(dosya, fieldnames=["ad", "vize", "final", "ortalama", "harf_notu"])
+        yazici.writeheader()
+        yazici.writerows(ogrenciler)
+    print(f"\nNotlar '{dosya_adi}' dosyasına kaydedildi.")
+
+def en_yuksek_notu_bul(ogrenciler):
+    """En yüksek ortalamaya sahip öğrenciyi bulur ve yazdırır."""
+    if not ogrenciler:
+        print("Hiç öğrenci yok.")
+        return
+    en_iyi = max(ogrenciler, key=lambda o: o["ortalama"])
+    print("\n=== En Yüksek Not Alan Öğrenci ===")
+    print(f"Ad: {en_iyi['ad']}")
+    print(f"Ortalama: {en_iyi['ortalama']}")
+    print(f"Harf Notu: {en_iyi['harf_notu']}")
+
+def main():
+    print("=== Öğrenci Not Sistemi ===")
+    ogrenciler = []
+    
+    while True:
+        print("\n--- Yeni Öğrenci ---")
+        ogrenci = ogrenci_bilgilerini_al()
+        ogrenciler.append(ogrenci)
+        print(f"{ogrenci['ad']} eklendi. Ortalaması: {ogrenci['ortalama']} - Harf: {ogrenci['harf_notu']}")
+        
+        devam = input("\nBaşka öğrenci eklemek istiyor musunuz? (e/h): ").strip().lower()
+        if devam != 'e':
+            break
+    
+    if ogrenciler:
+        dosyaya_kaydet(ogrenciler)
+        en_yuksek_notu_bul(ogrenciler)
+    else:
+        print("Hiç öğrenci girilmedi.")
+
+if __name__ == "__main__":
+    main()
