@@ -1,0 +1,14 @@
+[
+  {
+    "id": 101,
+    "title": "Suç ve Ceza",
+    "author": "Dostoyevski",
+    "available": false
+  },
+  {
+    "id": 102,
+    "title": "Sefiller",
+    "author": "Victor Hugo",
+    "available": true
+  }
+]
