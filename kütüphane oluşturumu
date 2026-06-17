@@ -1,0 +1,169 @@
+import json
+import os
+
+class Book:
+    def __init__(self, book_id, title, author, available=True):
+        self.id = book_id
+        self.title = title
+        self.author = author
+        self.available = available
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "author": self.author,
+            "available": self.available
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data["id"], data["title"], data["author"], data["available"])
+
+    def __str__(self):
+        durum = "Müsait" if self.available else "Ödünçte"
+        return f"[{self.id}] {self.title} - {self.author} ({durum})"
+
+
+class Library:
+    def __init__(self, file_path="library.json"):
+        self.file_path = file_path
+        self.books = []
+        self.load_from_json()  # Başlangıçta verileri yükle
+
+    def add_book(self, book):
+        # Aynı ID'ye sahip kitap varsa uyarı ver
+        if any(b.id == book.id for b in self.books):
+            print(f"Hata: {book.id} ID'li kitap zaten mevcut.")
+            return
+        self.books.append(book)
+        self.save_to_json()
+        print(f"Kitap eklendi: {book.title}")
+
+    def delete_book(self, book_id):
+        for i, book in enumerate(self.books):
+            if book.id == book_id:
+                del self.books[i]
+                self.save_to_json()
+                print(f"Kitap silindi (ID: {book_id})")
+                return
+        print(f"Hata: {book_id} ID'li kitap bulunamadı.")
+
+    def search_book(self, query):
+        query_lower = query.lower()
+        sonuc = []
+        for book in self.books:
+            if query_lower in book.title.lower() or query_lower in book.author.lower():
+                sonuc.append(book)
+        return sonuc
+
+    def lend_book(self, book_id):
+        for book in self.books:
+            if book.id == book_id:
+                if book.available:
+                    book.available = False
+                    self.save_to_json()
+                    print(f"Kitap ödünç verildi: {book.title}")
+                else:
+                    print(f"Kitap zaten ödünçte: {book.title}")
+                return
+        print(f"Hata: {book_id} ID'li kitap bulunamadı.")
+
+    def return_book(self, book_id):
+        for book in self.books:
+            if book.id == book_id:
+                if not book.available:
+                    book.available = True
+                    self.save_to_json()
+                    print(f"Kitap iade alındı: {book.title}")
+                else:
+                    print(f"Kitap zaten kütüphanede: {book.title}")
+                return
+        print(f"Hata: {book_id} ID'li kitap bulunamadı.")
+
+    def save_to_json(self):
+        with open(self.file_path, "w", encoding="utf-8") as f:
+            json.dump([book.to_dict() for book in self.books], f, indent=2, ensure_ascii=False)
+
+    def load_from_json(self):
+        if not os.path.exists(self.file_path):
+            return
+        with open(self.file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            self.books = [Book.from_dict(item) for item in data]
+
+    def list_books(self):
+        if not self.books:
+            print("Kütüphanede hiç kitap yok.")
+        else:
+            for book in self.books:
+                print(book)
+
+
+# ---------- Örnek Kullanım (CLI Menü) ----------
+def main():
+    kutuphane = Library("kutuphane.json")
+
+    while True:
+        print("\n--- KÜTÜPHANE YÖNETİM SİSTEMİ ---")
+        print("1. Kitap Ekle")
+        print("2. Kitap Sil")
+        print("3. Kitap Ara")
+        print("4. Kitap Ödünç Ver")
+        print("5. Kitap İade Al")
+        print("6. Tüm Kitapları Listele")
+        print("0. Çıkış")
+        secim = input("Seçiminiz: ")
+
+        if secim == "1":
+            try:
+                kid = int(input("Kitap ID: "))
+                title = input("Başlık: ")
+                author = input("Yazar: ")
+                kutuphane.add_book(Book(kid, title, author))
+            except ValueError:
+                print("ID sayı olmalıdır.")
+
+        elif secim == "2":
+            try:
+                kid = int(input("Silinecek kitap ID: "))
+                kutuphane.delete_book(kid)
+            except ValueError:
+                print("ID sayı olmalıdır.")
+
+        elif secim == "3":
+            query = input("Arama kelimesi (başlık veya yazar): ")
+            sonuc = kutuphane.search_book(query)
+            if sonuc:
+                print(f"{len(sonuc)} kitap bulundu:")
+                for b in sonuc:
+                    print(b)
+            else:
+                print("Kitap bulunamadı.")
+
+        elif secim == "4":
+            try:
+                kid = int(input("Ödünç verilecek kitap ID: "))
+                kutuphane.lend_book(kid)
+            except ValueError:
+                print("ID sayı olmalıdır.")
+
+        elif secim == "5":
+            try:
+                kid = int(input("İade edilecek kitap ID: "))
+                kutuphane.return_book(kid)
+            except ValueError:
+                print("ID sayı olmalıdır.")
+
+        elif secim == "6":
+            kutuphane.list_books()
+
+        elif secim == "0":
+            print("Çıkılıyor...")
+            break
+
+        else:
+            print("Geçersiz seçim, tekrar deneyin.")
+
+if __name__ == "__main__":
+    main()
