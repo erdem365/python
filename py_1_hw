@@ -1,0 +1,51 @@
+
+age = int(input("Age: "))
+day = input("Day (weekday/weekend): ").lower()
+student = input("Student (yes/no): ").lower()
+group_size = int(input("Group size: "))
+
+
+if age < 0 or age > 120:
+    print("Invalid age")
+elif day != "weekday" and day != "weekend":
+    print("Invalid day")
+else:
+    # 3. Kural: Yaş kategorisi ve baz fiyat
+    if 0 <= age <= 5:
+        category = "Child"
+        fee = 0.0
+    elif 6 <= age <= 17:
+        category = "Teen"
+        fee = 60.0
+    elif 18 <= age <= 64:
+        category = "Adult"
+        fee = 120.0
+    else:  # 65 ve üzeri
+        category = "Senior"
+        fee = 70.0
+
+    
+    student_discount_applied = False
+    weekend_surcharge_applied = False
+    group_discount_applied = False
+
+    if 18 <= age <= 64 and student == "yes":
+        fee = fee * 0.70
+        student_discount_applied = True
+
+  
+    if day == "weekend" and fee > 0:
+        fee = fee * 1.20
+        weekend_surcharge_applied = True
+
+   
+    if group_size >= 10 and fee > 0:
+        fee = fee * 0.90
+        group_discount_applied = True
+
+ 
+    print(f"Category: {category}")
+    print(f"Student discount: {student_discount_applied}")
+    print(f"Weekend surcharge: {weekend_surcharge_applied}")
+    print(f"Group discount: {group_discount_applied}")
+    print(f"Price: {fee:.2f}")
