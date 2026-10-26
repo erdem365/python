@@ -1,0 +1,53 @@
+
+
+total_scores = int(input("How many scores: "))
+
+counted = 0
+ignored = 0
+total_sum = 0
+highest = None
+lowest = None
+passed_count = 0
+
+scores_list = []
+
+for i in range(1, total_scores + 1):
+    score = int(input(f"Score {i}: "))
+
+    if score < 0:
+        break
+    
+    if score > 100:
+        ignored += 1
+        continue
+
+    counted += 1
+    total_sum += score
+    scores_list.append(score)
+
+    if highest is None or score > highest:
+        highest = score
+    
+    if lowest is None or score < lowest:
+        lowest = score
+
+    if score >= 50:
+        passed_count += 1
+
+
+if counted == 0:
+    print("No valid scores")
+else:
+    average = total_sum / counted
+    print(f"Scores counted: {counted}")
+    print(f"Scores ignored: {ignored}")
+    print(f"Sum: {total_sum}")
+    print(f"Average: {average:.2f}")
+    print(f"Highest: {highest}")
+    print(f"Lowest: {lowest}")
+    print(f"Passed: {passed_count} of {counted}")
+    print("Histogram:")
+    
+    for s in scores_list:
+        stars = "*" * (s // 10)
+        print(f"{s:>3} {stars}")
