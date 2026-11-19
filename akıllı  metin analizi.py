@@ -3,13 +3,13 @@ from collections import Counter
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# ============================================
-# AKILLI METİN ANALİZ SİSTEMİ
-# ============================================
 
-# ============================================
+# AKILLI METİN ANALİZ SİSTEMİ
+
+
+
 # TXT DOSYASINI OKUMA
-# ============================================
+
 
 dosya_adi = "metin.txt"
 
@@ -23,9 +23,8 @@ except FileNotFoundError:
     print(f"{dosya_adi} bulunamadı!")
     exit()
 
-# ============================================
+
 # METNİ TEMİZLEME
-# ============================================
 
 kucuk_metin = metin.lower()
 
@@ -33,9 +32,8 @@ temiz_metin = re.sub(r"[^\w\s]", "", kucuk_metin)
 
 kelimeler = temiz_metin.split()
 
-# ============================================
+
 # STOP WORDS
-# ============================================
 
 stop_words = [
     "ve",
@@ -62,9 +60,9 @@ for kelime in kelimeler:
     if kelime not in stop_words:
         filtrelenmis_kelimeler.append(kelime)
 
-# ============================================
+
 # TEMEL İSTATİSTİKLER
-# ============================================
+
 
 toplam_kelime = len(filtrelenmis_kelimeler)
 
@@ -83,17 +81,16 @@ ortalama_kelime_uzunlugu = (
     sum(kelime_uzunluklari) / len(kelime_uzunluklari)
 )
 
-# ============================================
+
 # EN ÇOK KULLANILAN KELİMELER
-# ============================================
+
 
 kelime_sayaci = Counter(filtrelenmis_kelimeler)
 
 en_yaygin_10 = kelime_sayaci.most_common(10)
 
-# ============================================
+
 # SONUÇLARI YAZDIRMA
-# ============================================
 
 print("\n===== METİN ANALİZ RAPORU =====\n")
 
@@ -114,9 +111,9 @@ for kelime, adet in en_yaygin_10:
 
     print(f"{kelime} -> {adet}")
 
-# ============================================
+
 # DATAFRAME OLUŞTURMA
-# ============================================
+
 
 df = pd.DataFrame(
     en_yaygin_10,
@@ -127,9 +124,9 @@ print("\n--- DATAFRAME ---\n")
 
 print(df)
 
-# ============================================
+
 # CSV DOSYASINA AKTARMA
-# ============================================
+
 
 df.to_csv(
     "kelime_analizi.csv",
